@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report:Report xmlns:rtl="http://www.4js.com/2004/RTL" xmlns:report="http://www.4js.com/2007/REPORT" xmlns="http://www.4js.com/2004/PXML" gstVersion="31409" version="6.00">
+    <report:Settings RWPageWidth="letterwidth" RWPageLength="letterlength" RWLeftMargin="0.5inch" RWTopMargin="0.5inch" RWRightMargin="0.5inch" RWBottomMargin="0.5inch">
+        <report:FormatList>
+            <report:Format-SVG/>
+            <report:Format-PDF/>
+            <report:Format-image/>
+        </report:FormatList>
+    </report:Settings>
+    <report:Data RWDataLocation="ReportLib.rdd" RWFglReportName="multipartReport"/>
+    <report:Conflicts/>
+    <rtl:stylesheet>
+        <PXML>
+            <rtl:match name="Report" nameConstraint="Report" minOccurs="1" maxOccurs="1">
+                <MINIPAGE name="Page Root" width="max" length="max">
+                    <rtl:match name="OnEveryRow" nameConstraint="OnEveryRow" minOccurs="0" maxOccurs="unbounded">
+                        <rtl:input-variable name="rpt_options.envreport" type="FGLString" expectedLocation="expectedHere"/>
+                        <MINIPAGE name="MiniPage" rtl:condition="rpt_options.envreport==&quot;Y&quot;" width="min" length="min">
+                            <rtl:call-report name="Call to SubReport ReportLib-rptEnvVars.xsd" url="envreport.4rp"/>
+                        </MINIPAGE>
+                        <rtl:input-variable name="rpt_options.dirreport" type="FGLString" expectedLocation="expectedBefore"/>
+                        <MINIPAGE name="MiniPage1" rtl:condition="rpt_options.dirreport==&quot;Y&quot;" width="min" length="min">
+                            <rtl:call-report name="Call to SubReport ReportLib-rptFiles.xsd" url="filereport.4rp"/>
+                        </MINIPAGE>
+                        <rtl:input-variable name="rpt_options.fieldreport" type="FGLString" expectedLocation="expectedBefore"/>
+                        <MINIPAGE name="MiniPage2" rtl:condition="rpt_options.fieldreport==&quot;Y&quot;" width="min" length="min">
+                            <rtl:call-report name="Call to SubReport ReportLib-rptFields.xsd" url="fieldreport.4rp"/>
+                        </MINIPAGE>
+                    </rtl:match>
+                </MINIPAGE>
+            </rtl:match>
+        </PXML>
+    </rtl:stylesheet>
+</report:Report>

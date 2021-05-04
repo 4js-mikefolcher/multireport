@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<report:Report xmlns:rtl="http://www.4js.com/2004/RTL" xmlns:report="http://www.4js.com/2007/REPORT" xmlns="http://www.4js.com/2004/PXML" gstVersion="31409" version="6.00">
+    <report:Settings RWPageWidth="letterwidth" RWPageLength="letterlength" RWLeftMargin="0.5inch" RWTopMargin="0.5inch" RWRightMargin="0.5inch" RWBottomMargin="0.5inch">
+        <report:FormatList>
+            <report:Format-SVG/>
+            <report:Format-PDF/>
+            <report:Format-image/>
+        </report:FormatList>
+    </report:Settings>
+    <report:Data RWDataLocation="ShowEnv.rdd" RWFglReportName="rptFiles"/>
+    <report:Conflicts/>
+    <rtl:stylesheet>
+        <PXML>
+            <rtl:match name="Report" nameConstraint="Report" minOccurs="1" maxOccurs="1">
+                <MINIPAGE name="PageRoot" width="max" length="max">
+                    <TABLE name="Table" length="max" rule="1.0point" ruleColor="#d2d2d2" border="1.0point" borderColor="#d2d2d2">
+                        <COLDEFS name="Coldefs">
+                            <COLDEF fWidth="200" name="TemplateField1"/>
+                            <COLDEF fWidth="100" hAlign="right" name="TemplateField2"/>
+                            <COLDEF fWidth="200" name="TemplateField3"/>
+                        </COLDEFS>
+                        <THEAD name="Head">
+                            <ROW name="Row" fontSize="20">
+                                <COL name="Col" colspan="2" padding="5" hAlign="center">
+                                    <WORDBOX name="title" text="Current Directory Files" localizeText="true"/>
+                                </COL>
+                            </ROW>
+                            <ROW name="Row1" bgColor="#f5f6f8" fontBold="true">
+                                <COL name="Col1" padding="2">
+                                    <WORDBOX name="TemplateField15" class="grwTableStringColumnTitle" floatingBehavior="enclosed" text="Filename" localizeText="true"/>
+                                </COL>
+                                <COL name="Col2" padding="2">
+                                    <WORDBOX name="TemplateField16" class="grwTableNumericColumnTitle" floatingBehavior="enclosed" textAlignment="right" text="Filesize" localizeText="true"/>
+                                </COL>
+                                <COL name="Col3" padding="2">
+                                    <WORDBOX name="TemplateField17" class="grwTableStringColumnTitle" floatingBehavior="enclosed" text="Modtime" localizeText="true"/>
+                                </COL>
+                            </ROW>
+                        </THEAD>
+                        <TBODY name="Body">
+                            <rtl:match name="Group filename" nameConstraint="Group" minOccurs="0" maxOccurs="unbounded">
+                                <rtl:match name="OnEveryRow" nameConstraint="OnEveryRow" minOccurs="0" maxOccurs="unbounded">
+                                    <ROW name="arow">
+                                        <COL name="Col5" padding="2">
+                                            <rtl:input-variable name="fileinfo.filename" type="FGLString" expectedLocation="expectedHere"/>
+                                            <WORDWRAPBOX name="TemplateField19" class="grwTableStringColumnValue" width="max" floatingBehavior="enclosed" text="{{fileinfo.filename}}"/>
+                                        </COL>
+                                        <COL name="Col6" padding="2">
+                                            <rtl:input-variable name="fileinfo.filesize" type="FGLNumeric" expectedLocation="expectedHere"/>
+                                            <DECIMALFORMATBOX name="TemplateField110" class="grwTableNumericColumnValue" anchorX="1.0" floatingBehavior="enclosed" textAlignment="right" format="----------#" value="{{fileinfo.filesize}}"/>
+                                        </COL>
+                                        <COL name="Col7" padding="2">
+                                            <rtl:input-variable name="fileinfo.modtime" type="FGLString" expectedLocation="expectedHere"/>
+                                            <WORDWRAPBOX name="TemplateField111" class="grwTableStringColumnValue" width="max" floatingBehavior="enclosed" text="{{fileinfo.modtime}}"/>
+                                        </COL>
+                                    </ROW>
+                                </rtl:match>
+                            </rtl:match>
+                            <rtl:match name="OnLastRow" nameConstraint="OnLastRow" minOccurs="0" maxOccurs="1">
+                                <ROW name="arow1">
+                                    <COL name="Col11" colspan="2" padding="2" hAlign="center">
+                                        <rtl:input-variable name="fileCount" type="FGLNumeric" expectedLocation="expectedHere"/>
+                                        <WORDBOX name="TemplateField114" class="grwTableNumericColumnValue" width="158.094" anchorX="1.0" floatingBehavior="enclosed" textAlignment="right" text="{{&quot;Total Count: &quot;+(fileCount).format(&quot;----------#&quot;)}}"/>
+                                    </COL>
+                                </ROW>
+                            </rtl:match>
+                        </TBODY>
+                    </TABLE>
+                </MINIPAGE>
+            </rtl:match>
+        </PXML>
+    </rtl:stylesheet>
+</report:Report>

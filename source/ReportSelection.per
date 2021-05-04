@@ -1,0 +1,33 @@
+LAYOUT
+	VBOX
+		GRID
+{
+<g "Select Report Options"        >
+	[chk001              ]
+	[chk002              ]
+	[chk003              ]
+	[chk004              ]
+
+<g "Select Report Output Options" >
+   [cbx001              ]
+}
+		END --GRID
+	END --VBOX
+END --LAYOUT
+
+ATTRIBUTES
+
+	CHECKBOX chk001 = formonly.envreport, VALUECHECKED="Y", VALUEUNCHECKED="N", NOT NULL, TEXT="Environment Report";
+	CHECKBOX chk002 = formonly.dirreport, VALUECHECKED="Y", VALUEUNCHECKED="N", NOT NULL, TEXT="Directory Listing Report";
+	CHECKBOX chk003 = formonly.fieldreport, VALUECHECKED="Y", VALUEUNCHECKED="N", NOT NULL, TEXT="Field Report";
+	CHECKBOX chk004 = formonly.consolidate, VALUECHECKED="Y", VALUEUNCHECKED="N", NOT NULL, TEXT="Consolidate Reports";
+
+	COMBOBOX cbx001 = formonly.rpt_output, ITEMS=(("t", "PDF"),("d", "File")), NOT NULL;
+
+END --ATTRIBUTES
+
+INSTRUCTIONS
+
+	SCREEN RECORD s_rpt_options(formonly.envreport THRU formonly.consolidate, formonly.rpt_output);
+
+END --INSTRUCTIONS
