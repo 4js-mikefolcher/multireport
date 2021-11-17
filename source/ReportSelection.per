@@ -9,9 +9,25 @@ LAYOUT
 	[chk004              ]
 
 <g "Select Report Output Options" >
-   [cbx001              ]
+ [cbx001                         ]
+ [cbx002                         ]
 }
 		END --GRID
+		GROUP (TEXT="Saved Files")
+			TABLE(DOUBLECLICK=view_file)
+{
+ File Name                     Size (KB)           Last Modified Date
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+[col001                       |col002             |col003               ]
+}
+			END --TABLE
+		END --GROUP
 	END --VBOX
 END --LAYOUT
 
@@ -22,12 +38,19 @@ ATTRIBUTES
 	CHECKBOX chk003 = formonly.fieldreport, VALUECHECKED="Y", VALUEUNCHECKED="N", NOT NULL, TEXT="Field Report";
 	CHECKBOX chk004 = formonly.consolidate, VALUECHECKED="Y", VALUEUNCHECKED="N", NOT NULL, TEXT="Consolidate Reports";
 
-	COMBOBOX cbx001 = formonly.rpt_output, ITEMS=(("t", "PDF"),("d", "File")), NOT NULL;
+	COMBOBOX cbx001 = formonly.rpt_output, ITEMS=(("t", "Screen"),("d", "File")), NOT NULL;
+	COMBOBOX cbx002 = formonly.rpt_type, ITEMS=(("p","PDF"),("x", "Excel"), ("t", "Text")), NOT NULL;
+
+	EDIT col001 = formonly.filename, SCROLL;
+	EDIT col002 = formonly.filesize, SCROLL;
+	EDIT col003 = formonly.filedate, SCROLL;
+
 
 END --ATTRIBUTES
 
 INSTRUCTIONS
 
-	SCREEN RECORD s_rpt_options(formonly.envreport THRU formonly.consolidate, formonly.rpt_output);
+	SCREEN RECORD s_rpt_options(formonly.envreport THRU formonly.consolidate, formonly.rpt_output, formonly.rpt_type);
+	SCREEN RECORD s_file_info(formonly.filename, formonly.filesize, formonly.filedate);
 
 END --INSTRUCTIONS

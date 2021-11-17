@@ -24,10 +24,25 @@ PUBLIC TYPE t_rpt_option RECORD
 	envreport CHAR(1),
 	dirreport CHAR(1),
 	fieldreport CHAR(1),
-	consolidate CHAR(1)
+	consolidate CHAR(1),
+	output_preview CHAR(1),
+	output_type CHAR(1)
 END RECORD
 
 PUBLIC DEFINE outputPreview BOOLEAN = FALSE
+PUBLIC DEFINE outputType CHAR(1) = "p"
+
+PUBLIC CONSTANT cOutputScreen = "t"
+PUBLIC CONSTANT cOutputFile = "d"
+
+PUBLIC CONSTANT cPDFType = "p"
+PUBLIC CONSTANT cXLSXType = "x"
+PUBLIC CONSTANT cTXTType = "t"
+
+PUBLIC CONSTANT cCurrentDir = "."
+PUBLIC CONSTANT cReportDir = "..%1reports%1."
+
+PRIVATE DEFINE tmpFileName STRING
 
 PUBLIC FUNCTION getEnvVars() RETURNS DYNAMIC ARRAY OF t_keyvalue
 	DEFINE r_env t_keyvalue
@@ -60,20 +75,26 @@ PUBLIC FUNCTION getEnvVars() RETURNS DYNAMIC ARRAY OF t_keyvalue
 
 END FUNCTION #getEnvVars
 
-PUBLIC FUNCTION createEnvReport() RETURNS ()
+PUBLIC FUNCTION (rpt_options t_rpt_option) createEnvReport() RETURNS ()
 	DEFINE sorted_vars DYNAMIC ARRAY OF t_keyvalue
 	DEFINE idx INTEGER
 
 	LET sorted_vars = getEnvVars()
 	CALL sorted_vars.sort("varname", FALSE)
 
-	START REPORT rptEnvVars TO XML HANDLER reportConfiguration("envreport.4rp")
+   IF rpt_options.output_type == cTXTType THEN
+      LET tmpFileName = os.Path.makeTempName(), ".txt"
+      START REPORT rptEnvVars TO FILE tmpFileName
+   ELSE
+      START REPORT rptEnvVars TO XML HANDLER rpt_options.reportConfiguration("envreport.4rp")
+   END IF
 
 	FOR idx = 1 TO sorted_vars.getLength()
 		OUTPUT TO REPORT rptEnvVars(sorted_vars[idx].varname.getCharAt(1), sorted_vars[idx].*)
 	END FOR
 
 	FINISH REPORT rptEnvVars
+	CALL rpt_options.saveReport()
 
 END FUNCTION #createReport
 
@@ -87,28 +108,34 @@ REPORT rptEnvVars(firstChar CHAR(1), pair t_keyvalue)
 			LET charCount = 0
 
 		AFTER GROUP OF firstChar
-			PRINTX charCount
+			PRINT charCount
 
 		ON EVERY ROW
-			PRINTX firstChar, pair.*
+			PRINT firstChar, pair.*
 			LET charCount = charCount + 1
 
 END REPORT
 
-PUBLIC FUNCTION createFileReport() RETURNS ()
+PUBLIC FUNCTION (rpt_options t_rpt_option) createFileReport() RETURNS ()
 	DEFINE files DYNAMIC ARRAY OF t_fileinfo
 	DEFINE idx INTEGER
 
-	LET files = dirList()
+	LET files = dirList(cCurrentDir)
 	CALL files.sort("filename", FALSE)
 
-	START REPORT rptFiles TO XML HANDLER reportConfiguration("filereport.4rp")
+   IF rpt_options.output_type == cTXTType THEN
+      LET tmpFileName = os.Path.makeTempName(), ".txt"
+      START REPORT rptFiles TO FILE tmpFileName
+   ELSE
+      START REPORT rptFiles TO XML HANDLER rpt_options.reportConfiguration("filereport.4rp")
+   END IF
 
 	FOR idx = 1 TO files.getLength()
 		OUTPUT TO REPORT rptFiles(files[idx].*)
 	END FOR
 
 	FINISH REPORT rptFiles
+	CALL rpt_options.saveReport()
 
 END FUNCTION #createFileReport
 
@@ -119,29 +146,35 @@ REPORT rptFiles(fileinfo t_fileinfo)
 
 	FORMAT
 		ON EVERY ROW
-			PRINTX fileinfo.*
+			PRINT fileinfo.*
 			LET fileCount = fileCount + 1
 
 		ON LAST ROW
-			PRINTX fileCount
+			PRINT fileCount
 			LET fileCount = 0
 
 END REPORT #rptFiles
 
-PUBLIC FUNCTION createFieldReport() RETURNS ()
+PUBLIC FUNCTION (rpt_options t_rpt_option) createFieldReport() RETURNS ()
 	DEFINE formfields DYNAMIC ARRAY OF t_formfield
 	DEFINE idx INTEGER
 
 	LET formfields = getFields("ReportSelection.42f")
 	CALL formfields.sort("field_id", FALSE)
 
-	START REPORT rptFields TO XML HANDLER reportConfiguration("fieldreport.4rp")
+   IF rpt_options.output_type == cTXTType THEN
+      LET tmpFileName = os.Path.makeTempName(), ".txt"
+      START REPORT rptFields TO FILE tmpFileName
+   ELSE
+      START REPORT rptFields TO XML HANDLER rpt_options.reportConfiguration("fieldreport.4rp")
+   END IF
 
 	FOR idx = 1 TO formfields.getLength()
 		OUTPUT TO REPORT rptFields(formfields[idx].*)
 	END FOR
 
 	FINISH REPORT rptFields
+	CALL rpt_options.saveReport()
 
 END FUNCTION #createFieldReport
 
@@ -152,16 +185,16 @@ REPORT rptFields(formfield t_formfield)
 
 	FORMAT
 		ON EVERY ROW
-			PRINTX formfield.*
+			PRINT formfield.*
 			LET fieldCount = fieldCount + 1
 
 		ON LAST ROW
-			PRINTX fieldCount
+			PRINT fieldCount
 			LET fieldCount = 0
 
 END REPORT
 
-PUBLIC FUNCTION reportConfiguration(rpName STRING) RETURNS om.SaxDocumentHandler
+PUBLIC FUNCTION (rpt_options t_rpt_option) reportConfiguration(rpName STRING) RETURNS om.SaxDocumentHandler
 	DEFINE reportFileName STRING
 	# load the 4rp file
 	IF NOT fgl_report_loadCurrentSettings(rpName) THEN
@@ -170,34 +203,58 @@ PUBLIC FUNCTION reportConfiguration(rpName STRING) RETURNS om.SaxDocumentHandler
 
 	LET reportFileName = os.Path.makeTempName(), ".pdf"
 
-	CALL fgl_report_selectDevice("PDF")
+   CASE rpt_options.output_type
+      WHEN cPDFType
+         LET reportFileName = os.Path.makeTempName(), ".pdf"
+         CALL fgl_report_selectDevice("PDF")
+      WHEN cXLSXType
+         LET reportFileName = os.Path.makeTempName(), ".xlsx"
+         CALL fgl_report_configureXLSXDevice(NULL,NULL,NULL,NULL,NULL,NULL,TRUE)
+         CALL fgl_report_selectDevice("XLSX")
+      WHEN cTXTType
+         LET reportFileName = os.Path.makeTempName(), ".txt"
+	END CASE
+
+	CALL fgl_report_selectPreview(FALSE)
 	CALL fgl_report_setOutputFileName(reportFileName)
-	CALL fgl_report_selectPreview(outputPreview)
-	IF NOT outputPreview THEN
-		DISPLAY SFMT("Saving report file to %1", reportFileName)
-		MESSAGE SFMT("Saving report file to %1", reportFileName)
-	END IF
+	LET tmpFileName = reportFileName
 
 	RETURN fgl_report_commitCurrentSettings()
 
 END FUNCTION
 
-PUBLIC FUNCTION multiReport(rpt_options t_rpt_option) RETURNS ()
+PUBLIC FUNCTION (rpt_options t_rpt_option) multiReport() RETURNS ()
 
-	START REPORT multipartReport TO XML HANDLER reportConfiguration("multipartReport.4rp")
-	OUTPUT TO REPORT multipartReport(rpt_options.*)
-	FINISH REPORT multipartReport
+   IF rpt_options.output_type == cTXTType THEN
+      LET tmpFileName = os.Path.makeTempName(), ".txt"
+      #START REPORT multipartReportText TO FILE tmpFileName
+      START REPORT multipartReportText TO PIPE "cat >> " || tmpFileName
+   ELSE
+      START REPORT multipartReport TO XML HANDLER rpt_options.reportConfiguration("multipartReport.4rp")
+   END IF
+   IF rpt_options.output_type == cTXTType THEN
+      OUTPUT TO REPORT multipartReportText(rpt_options.*)
+      FINISH REPORT multipartReportText
+   ELSE
+      OUTPUT TO REPORT multipartReport(rpt_options.*)
+      FINISH REPORT multipartReport
+   END IF
+	CALL rpt_options.saveReport()
 
 END FUNCTION #multiReport
 
-PUBLIC FUNCTION dirList() RETURNS (DYNAMIC ARRAY OF t_fileinfo)
+PUBLIC FUNCTION dirList(dirPath STRING) RETURNS (DYNAMIC ARRAY OF t_fileinfo)
 	DEFINE myList DYNAMIC ARRAY OF t_fileinfo
 	DEFINE idx INTEGER
 	DEFINE handle INTEGER
 	DEFINE filename STRING
 
 	LET idx = 0
-	LET handle = os.Path.dirOpen(".")
+	IF dirPath == cReportDir THEN
+		LET dirPath = SFMT(cReportDir, os.Path.separator())
+	END IF
+
+	LET handle = os.Path.dirOpen(dirPath)
 	WHILE handle > 0
 		LET filename = os.Path.dirNext(handle)
 		IF filename IS NULL THEN
@@ -208,8 +265,8 @@ PUBLIC FUNCTION dirList() RETURNS (DYNAMIC ARRAY OF t_fileinfo)
 		END IF
 		LET idx = idx + 1
 		LET myList[idx].filename = filename
-		LET myList[idx].filesize = os.Path.size(filename)
-		LET myList[idx].modtime = os.Path.mtime(filename)
+		LET myList[idx].filesize = os.Path.size(SFMT("%1%2%3", dirPath, os.Path.separator(), filename))
+		LET myList[idx].modtime = os.Path.mtime(SFMT("%1%2%3", dirPath, os.Path.separator(), filename))
 	END WHILE
 
 	CALL os.Path.dirClose(handle)
@@ -257,7 +314,7 @@ REPORT multipartReport(rpt_options t_rpt_option)
 	FORMAT
 		ON EVERY ROW
 
-			PRINTX rpt_options.*
+			PRINT rpt_options.*
 
 			START REPORT rptEnvVars
 			IF rpt_options.envreport == "Y" THEN
@@ -274,7 +331,7 @@ REPORT multipartReport(rpt_options t_rpt_option)
 
 			START REPORT rptFiles
 			IF rpt_options.dirreport == "Y" THEN
-				LET files = dirList()
+				LET files = dirList(cCurrentDir)
 				CALL files.sort("filename", FALSE)
 				FOR idx = 1 TO files.getLength()
 					OUTPUT TO REPORT rptFiles(files[idx].*)
@@ -297,3 +354,75 @@ REPORT multipartReport(rpt_options t_rpt_option)
 			FINISH REPORT rptFields
 
 END REPORT
+
+REPORT multipartReportText(rpt_options t_rpt_option)
+	DEFINE sorted_vars DYNAMIC ARRAY OF t_keyvalue
+	DEFINE files DYNAMIC ARRAY OF t_fileinfo
+	DEFINE formfields DYNAMIC ARRAY OF t_formfield
+	DEFINE empty_vars t_keyvalue
+	DEFINE empty_files t_fileinfo
+	DEFINE empty_fields t_formfield
+	DEFINE idx INTEGER
+
+	FORMAT
+		ON EVERY ROW
+
+			PRINT rpt_options.*
+
+			START REPORT rptEnvVars TO PIPE "cat >> " || tmpFileName
+			IF rpt_options.envreport == "Y" THEN
+
+				LET sorted_vars = getEnvVars()
+				CALL sorted_vars.sort("varname", FALSE)
+				FOR idx = 1 TO sorted_vars.getLength()
+					OUTPUT TO REPORT rptEnvVars(sorted_vars[idx].varname.getCharAt(1), sorted_vars[idx].*)
+				END FOR
+			ELSE
+				OUTPUT TO REPORT rptEnvVars("", empty_vars.*)
+			END IF
+			FINISH REPORT rptEnvVars
+
+			START REPORT rptFiles TO PIPE "cat >> " || tmpFileName
+			IF rpt_options.dirreport == "Y" THEN
+				LET files = dirList(cCurrentDir)
+				CALL files.sort("filename", FALSE)
+				FOR idx = 1 TO files.getLength()
+					OUTPUT TO REPORT rptFiles(files[idx].*)
+				END FOR
+			ELSE
+				OUTPUT TO REPORT rptFiles(empty_files.*)
+			END IF
+			FINISH REPORT rptFiles
+
+			START REPORT rptFields TO PIPE "cat >> " || tmpFileName
+			IF rpt_options.fieldreport == "Y" THEN
+				LET formfields = getFields("ReportSelection.42f")
+				CALL formfields.sort("field_id", FALSE)
+				FOR idx = 1 TO formfields.getLength()
+					OUTPUT TO REPORT rptFields(formfields[idx].*)
+				END FOR
+			ELSE
+				OUTPUT TO REPORT rptFields(empty_fields.*)
+			END IF
+			FINISH REPORT rptFields
+
+END REPORT
+
+PRIVATE FUNCTION (rpt_options t_rpt_option) saveReport() RETURNS ()
+	DEFINE saveFilename STRING
+	DEFINE result BOOLEAN
+
+	LET saveFilename = SFMT("..%1reports%1%2", os.Path.separator(), os.Path.baseName(tmpFilename))
+
+	LET result = os.Path.copy(tmpFilename, saveFilename)
+
+	IF result THEN
+		DISPLAY SFMT("File %1 saved!", saveFilename)
+		IF rpt_options.output_preview == cOutputScreen THEN
+			CALL FGL_PUTFILE(saveFilename, os.Path.baseName(saveFilename))
+		END IF
+	ELSE
+		DISPLAY SFMT("File %1 NOT saved!", saveFilename)
+	END IF
+
+END FUNCTION #saveReport
